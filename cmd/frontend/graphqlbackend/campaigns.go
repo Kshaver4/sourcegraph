@@ -172,7 +172,7 @@ type ChangesetCountsArgs struct {
 
 type ListChangesetsArgs struct {
 	First         *int32
-	State         *campaigns.ChangesetState
+	State         *campaigns.ChangesetPublicationState
 	ExternalState *campaigns.ChangesetExternalState
 	ReviewState   *campaigns.ChangesetReviewState
 	CheckState    *campaigns.ChangesetCheckState
@@ -230,7 +230,7 @@ type ChangesetResolver interface {
 	CreatedAt() DateTime
 	UpdatedAt() DateTime
 	NextSyncAt(ctx context.Context) (*DateTime, error)
-	State() campaigns.ChangesetState
+	State() campaigns.ChangesetPublicationState
 	ExternalState() *campaigns.ChangesetExternalState
 	Campaigns(ctx context.Context, args *ListCampaignArgs) (CampaignsConnectionResolver, error)
 

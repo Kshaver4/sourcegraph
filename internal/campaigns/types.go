@@ -94,24 +94,43 @@ func (c *Campaign) GenChangesetBody(externalURL string) string {
 	return description
 }
 
-// ChangesetState defines the possible states of a Changeset.
-type ChangesetState string
+// ChangesetPublicationState defines the possible publication states of a Changeset.
+type ChangesetPublicationState string
 
 // ChangesetState constants.
 const (
-	ChangesetStateUnpublished ChangesetState = "UNPUBLISHED"
-	ChangesetStatePublishing  ChangesetState = "PUBLISHING"
-	ChangesetStateErrored     ChangesetState = "ERRORED"
-	ChangesetStateSynced      ChangesetState = "SYNCED"
+	ChangesetPublicationStateUnpublished ChangesetPublicationState = "UNPUBLISHED"
+	ChangesetPublicationStatePublished   ChangesetPublicationState = "PUBLISHED"
 )
 
-// Valid returns true if the given ChangesetState is valid.
-func (s ChangesetState) Valid() bool {
+// Valid returns true if the given ChangesetPublicationState is valid.
+func (s ChangesetPublicationState) Valid() bool {
 	switch s {
-	case ChangesetStateUnpublished,
-		ChangesetStatePublishing,
-		ChangesetStateErrored,
-		ChangesetStateSynced:
+	case ChangesetPublicationStateUnpublished, ChangesetPublicationStatePublished:
+		return true
+	default:
+		return false
+	}
+}
+
+// ReconcilerState defines the possible states of a Reconciler.
+type ReconcilerState string
+
+// ReconcilerState constants.
+const (
+	ReconcilerStateQueued     ReconcilerState = "queued"
+	ReconcilerStateProcessing ReconcilerState = "processing"
+	ReconcilerStateErrored    ReconcilerState = "errored"
+	ReconcilerStateCompleted  ReconcilerState = "completed"
+)
+
+// Valid returns true if the given ReconcilerState is valid.
+func (s ReconcilerState) Valid() bool {
+	switch s {
+	case ReconcilerStateQueued,
+		ReconcilerStateProcessing,
+		ReconcilerStateErrored,
+		ReconcilerStateCompleted:
 		return true
 	default:
 		return false
@@ -230,7 +249,22 @@ type Changeset struct {
 	DiffStatChanged     *int32
 	DiffStatDeleted     *int32
 	SyncState           ChangesetSyncState
+
+	CurrentSpecID  int64
+	PreviousSpecID int64
+
+	PublicationState ChangesetPublicationState // "unpublished", "published"
+
+	ReconcilerState ReconcilerState // "queued", "processing", "completed", "errored"
+	FailureMessage  *string
+	StartedAt       time.Time
+	FinishedAt      time.Time
+	ProcessAfter    time.Time
+	NumResets       int64
 }
+
+// RecordID is needed to implement the workerutil.Record interface.
+func (c *Changeset) RecordID() int { return int(c.ID) }
 
 // Clone returns a clone of a Changeset.
 func (c *Changeset) Clone() *Changeset {
@@ -1750,6 +1784,18 @@ func (d *ChangesetSpecDescription) Diff() (string, error) {
 		return "", ErrNoCommits
 	}
 	return d.Commits[0].Diff, nil
+}
+
+// CommitMessage returns the Message of the first GitCommitDescription in Commits. If the
+// ChangesetSpecDescription doesn't have Commits it returns ErrNoCommits.
+//
+// We currently only support a single commit in Commits. Once we support more,
+// this method will need to be revisited.
+func (d *ChangesetSpecDescription) CommitMessage() (string, error) {
+	if len(d.Commits) == 0 {
+		return "", ErrNoCommits
+	}
+	return d.Commits[0].Message, nil
 }
 
 type GitCommitDescription struct {

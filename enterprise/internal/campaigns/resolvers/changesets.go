@@ -402,9 +402,9 @@ func (r *changesetResolver) Body() (string, error) {
 	return r.changeset.Body()
 }
 
-func (r *changesetResolver) State() campaigns.ChangesetState {
+func (r *changesetResolver) State() campaigns.ChangesetPublicationState {
 	// TODO: Implement.
-	return campaigns.ChangesetStateUnpublished
+	return campaigns.ChangesetPublicationStateUnpublished
 }
 
 func (r *changesetResolver) ExternalState() *campaigns.ChangesetExternalState {

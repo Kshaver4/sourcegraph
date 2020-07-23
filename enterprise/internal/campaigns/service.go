@@ -290,6 +290,16 @@ func (s *Service) ApplyCampaign(ctx context.Context, opts ApplyCampaignOpts) (ca
 		return campaign, tx.CreateCampaign(ctx, campaign)
 	}
 
+	// TODO: Load all ChangesetSpecs
+	//
+	// Load all changesets in the campaign, an:
+	//
+	// (1) Update changesets to new changesetSpec and set worker state to "queued"
+	//
+	// OR
+	//
+	// (2) Create new changeset
+
 	return campaign, tx.UpdateCampaign(ctx, campaign)
 }
 
