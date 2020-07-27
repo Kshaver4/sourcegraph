@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strings"
 
@@ -77,17 +76,6 @@ func newRange(startLine, startCharacter, endLine, endCharacter int) bundles.Rang
 type DocumentPathRangeID struct {
 	Path    string
 	RangeID types.ID
-}
-
-// ErrMalformedBundle is returned when a bundle is missing an expected map key.
-type ErrMalformedBundle struct {
-	Filename string // the filename of the malformed bundle
-	Name     string // the type of value key should contain
-	Key      string // the missing key
-}
-
-func (e ErrMalformedBundle) Error() string {
-	return fmt.Sprintf("malformed bundle: unknown %s %s", e.Name, e.Key)
 }
 
 // OpenDatabase opens a handle to the bundle file at the given path.
@@ -304,12 +292,7 @@ func (db *databaseImpl) MonikersByPosition(ctx context.Context, path string, lin
 		for _, monikerID := range r.MonikerIDs {
 			moniker, exists := documentData.Monikers[monikerID]
 			if !exists {
-				return nil, ErrMalformedBundle{
-					Filename: db.filename,
-					Name:     "moniker",
-					Key:      string(monikerID),
-					// TODO(efritz) - add document context
-				}
+				continue
 			}
 
 			batch = append(batch, bundles.MonikerData{
@@ -398,12 +381,7 @@ func (db *databaseImpl) hover(ctx context.Context, documentData types.DocumentDa
 
 	text, exists := documentData.HoverResults[r.HoverResultID]
 	if !exists {
-		return "", false, ErrMalformedBundle{
-			Filename: db.filename,
-			Name:     "hoverResult",
-			Key:      string(r.HoverResultID),
-			// TODO(efritz) - add document context
-		}
+		return "", false, nil
 	}
 
 	return text, true, nil
@@ -487,11 +465,7 @@ func (db *databaseImpl) getResultsByIDs(ctx context.Context, ids []types.ID) (ma
 			return nil, pkgerrors.Wrap(err, "db.getResultChunkByID")
 		}
 		if !exists {
-			return nil, ErrMalformedBundle{
-				Filename: db.filename,
-				Name:     "result chunk",
-				Key:      fmt.Sprintf("%d", index),
-			}
+			continue
 		}
 
 		resultChunks[index] = resultChunkData
@@ -505,24 +479,14 @@ func (db *databaseImpl) getResultsByIDs(ctx context.Context, ids []types.ID) (ma
 
 		documentIDRangeIDs, exists := resultChunkData.DocumentIDRangeIDs[id]
 		if !exists {
-			return nil, ErrMalformedBundle{
-				Filename: db.filename,
-				Name:     "result",
-				Key:      string(id),
-				// TODO(efritz) - add result chunk context
-			}
+			continue
 		}
 
 		var resultData []DocumentPathRangeID
 		for _, documentIDRangeID := range documentIDRangeIDs {
 			path, ok := resultChunkData.DocumentPaths[documentIDRangeID.DocumentID]
 			if !ok {
-				return nil, ErrMalformedBundle{
-					Filename: db.filename,
-					Name:     "documentPath",
-					Key:      string(documentIDRangeID.DocumentID),
-					// TODO(efritz) - add result chunk context
-				}
+				continue
 			}
 
 			resultData = append(resultData, DocumentPathRangeID{
@@ -583,11 +547,7 @@ func (db *databaseImpl) convertRangesToLocations(ctx context.Context, pairs map[
 		}
 
 		if !exists {
-			return nil, ErrMalformedBundle{
-				Filename: db.filename,
-				Name:     "document",
-				Key:      path,
-			}
+			continue
 		}
 
 		documents[path] = documentData
@@ -602,12 +562,7 @@ func (db *databaseImpl) convertRangesToLocations(ctx context.Context, pairs map[
 
 			r, exists := documents[path].Ranges[rangeID]
 			if !exists {
-				return nil, ErrMalformedBundle{
-					Filename: db.filename,
-					Name:     "range",
-					Key:      string(rangeID),
-					// TODO(efritz) - add document context
-				}
+				continue
 			}
 
 			locations = append(locations, bundles.Location{
